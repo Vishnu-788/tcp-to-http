@@ -1,49 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net"
+
+	"github.com/vishnu-788/tcp-to-http/internal/request"
 )
-
-func getLinesChannel(f io.ReadCloser) <-chan string {
-	out := make(chan string, 1)
-
-	go func() {
-		defer f.Close()
-		defer close(out)
-
-		str := ""
-		for {
-			data := make([]byte, 8)
-
-			n, err := f.Read(data)
-			if err != nil {
-				break
-			}
-
-			data = data[:n]
-			if i := bytes.IndexByte(data, '\n'); i != -1 {
-				str += string(data[:i])
-				data = data[i+1:]
-				fmt.Printf("Debug: %s\n", str)
-				out <- str
-				str = ""
-			}
-
-			str += string(data)
-		}
-
-		if len(str) != 0 {
-			fmt.Printf("Debug: %s\n", str)
-			out <- str
-		}
-	}()
-
-	return out
-}
 
 func main() {
 	listener, err := net.Listen("tcp", ":42069")
@@ -57,8 +20,15 @@ func main() {
 			log.Fatal("error opening file", err)
 		}
 
-		for line := range getLinesChannel(conn) {
-			fmt.Printf("Read: %s\n", line)
+		r, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Fatal("error", err)
 		}
+
+		fmt.Printf("Request Line: \n")
+		fmt.Printf("- Method: %s\n", r.RequestLine.Method)
+		fmt.Printf("- Target: %s\n", r.RequestLine.RequestTarget)
+		fmt.Printf("- Version: %s\n", r.RequestLine.HttpVersion)
+
 	}
 }
