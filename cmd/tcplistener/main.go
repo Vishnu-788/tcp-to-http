@@ -28,6 +28,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 			if i := bytes.IndexByte(data, '\n'); i != -1 {
 				str += string(data[:i])
 				data = data[i+1:]
+				fmt.Printf("Debug: %s\n", str)
 				out <- str
 				str = ""
 			}
@@ -36,6 +37,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 		}
 
 		if len(str) != 0 {
+			fmt.Printf("Debug: %s\n", str)
 			out <- str
 		}
 	}()
@@ -55,7 +57,7 @@ func main() {
 			log.Fatal("error opening file", err)
 		}
 
-		for line := range getLinesChannel(conn){
+		for line := range getLinesChannel(conn) {
 			fmt.Printf("Read: %s\n", line)
 		}
 	}
