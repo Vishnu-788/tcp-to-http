@@ -10,8 +10,9 @@ type Headers struct {
 	headers map[string]string
 }
 
-func (h *Headers) Get(name string) string {
-	return h.headers[strings.ToLower(name)]
+func (h *Headers) Get(name string) (string, bool) {
+	value, ok := h.headers[strings.ToLower(name)]
+	return value, ok
 }
 
 func (h *Headers) Set(name, value string) {
@@ -39,6 +40,8 @@ func NewHeaders() *Headers {
 		headers: map[string]string{},
 	}
 }
+
+
 
 func isToken(str []byte) bool {
 

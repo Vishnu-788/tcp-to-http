@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/vishnu-788/tcp-to-http/internal/headers"
@@ -14,8 +15,9 @@ type parserState string
 // Enums
 const (
 	StateInit    parserState = "init"
-	StateDone    parserState = "done"
 	StateHeaders parserState = "headers"
+	StateBody    parserState = "body"
+	StateDone    parserState = "done"
 	StateError   parserState = "error"
 )
 
@@ -36,6 +38,7 @@ type Request struct {
 	RequestLine RequestLine
 	state       parserState
 	Headers     *headers.Headers
+	Body        string
 }
 
 func (r *Request) parse(data []byte) (int, error) {
@@ -43,6 +46,11 @@ func (r *Request) parse(data []byte) (int, error) {
 outer:
 	for {
 		currentData := data[read:]
+
+		if len(currentData) == 0 {
+			break outer
+		}
+
 		switch r.state {
 		case StateInit:
 			rl, n, err := parseRequestLine(currentData)
@@ -61,9 +69,6 @@ outer:
 
 			r.state = StateHeaders
 
-		case StateDone:
-			break outer
-
 		case StateHeaders:
 			n, done, err := r.Headers.Parse(currentData)
 			if err != nil {
@@ -76,10 +81,34 @@ outer:
 			}
 
 			if done {
-				r.state = StateDone
+				// TODO: If the content doesn't have any body update state to done else to body
+				if r.hasBody() {
+					r.state = StateBody
+				} else {
+					r.state = StateDone
+				}
 			}
 
 			read += n
+
+		case StateBody:
+			length := getInt(r.Headers, "content-length", 0)	
+			if length == 0 {
+				r.state = StateDone
+				break
+			}
+			
+			remaining := min(length - len(r.Body), len(currentData))
+			r.Body += string(currentData[:remaining])
+
+			read += remaining
+
+			if length == len(r.Body) {
+				r.state = StateDone
+			}
+
+		case StateDone:
+			break outer
 
 		case StateError:
 			return 0, ERROR_REQ_IN_ERROR_STATE
@@ -96,10 +125,30 @@ func (r *Request) done() bool {
 	return r.state == StateDone || r.state == StateError
 }
 
+func (r *Request) hasBody() bool {
+	return getInt(r.Headers, "content-length", 0) > 0
+}
+
+func getInt(headers *headers.Headers, name string, defaultValue int) int {
+	vStr, exists := headers.Get(name)
+	if !exists {
+		return defaultValue
+	}
+	
+	v, err := strconv.Atoi(vStr)
+	if err != nil {
+		return defaultValue
+	}
+
+	return v
+
+}
+
 func newRequest() *Request {
 	return &Request{
-		state: StateInit,
+		state:   StateInit,
 		Headers: headers.NewHeaders(),
+		Body: "",
 	}
 }
 
@@ -135,7 +184,7 @@ func parseRequestLine(b []byte) (*RequestLine, int, error) {
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	request := newRequest()
 
-	//TODO: There is case where the request is more that 1k.
+	// TODO: There is case where the request is more that 1k.
 	buf := make([]byte, 1024)
 	bufLen := 0
 

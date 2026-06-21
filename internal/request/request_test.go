@@ -73,9 +73,17 @@ func TestParseHeaders(t *testing.T) {
 	r, err := RequestFromReader(reader)
 	require.NoError(t, err)
 	require.NotNil(t, r)
-	assert.Equal(t, "localhost:42069", r.Headers.Get("host"))
-	assert.Equal(t, "curl/7.81.0", r.Headers.Get("user-agent"))
-	assert.Equal(t, "*/*", r.Headers.Get("accept"))
+	host, ok :=  r.Headers.Get("host")
+	assert.True(t, ok)
+	assert.Equal(t, "localhost:42069", host)
+
+	userAgent, ok := r.Headers.Get("user-agent")
+	assert.True(t, ok)
+	assert.Equal(t, "curl/7.81.0", userAgent)
+
+	accept, ok := r.Headers.Get("accept")
+	assert.True(t, ok)
+	assert.Equal(t, "*/*", accept)
 
 	reader = &chunkReader{
 		data:            "GET / HTTP/1.1\r\nHost localhost:42069\r\n\r\n",
@@ -84,5 +92,24 @@ func TestParseHeaders(t *testing.T) {
 
 	r, err = RequestFromReader(reader)
 	require.Error(t, err)
+
+}
+
+func TestParseBody(t *testing.T) {
+	reader := &chunkReader{
+		data: "GET / HTTP/1.1\r\n" +
+			"Host: localhost:42069\r\n" +
+			"User-agent: curl/7.81.0\r\n" +
+			"Accept: */*\r\n" +
+			"Content-Length: 13\r\n" +
+			"\r\n" +
+			"hello world\n",
+		numBytesPerRead: 4,
+	}
+
+	r, err := RequestFromReader(reader)
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	assert.Equal(t, "Hello world", r.Body)
 
 }
