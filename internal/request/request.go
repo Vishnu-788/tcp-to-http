@@ -92,13 +92,13 @@ outer:
 			read += n
 
 		case StateBody:
-			length := getInt(r.Headers, "content-length", 0)	
+			length := getInt(r.Headers, "content-length", 0)
+
 			if length == 0 {
-				r.state = StateDone
-				break
+				panic("Chunk not implemented")
 			}
-			
-			remaining := min(length - len(r.Body), len(currentData))
+
+			remaining := min(length-len(r.Body), len(currentData))
 			r.Body += string(currentData[:remaining])
 
 			read += remaining
@@ -126,7 +126,8 @@ func (r *Request) done() bool {
 }
 
 func (r *Request) hasBody() bool {
-	return getInt(r.Headers, "content-length", 0) > 0
+	length := getInt(r.Headers, "content-length", 0)
+	return length > 0
 }
 
 func getInt(headers *headers.Headers, name string, defaultValue int) int {
@@ -134,7 +135,7 @@ func getInt(headers *headers.Headers, name string, defaultValue int) int {
 	if !exists {
 		return defaultValue
 	}
-	
+
 	v, err := strconv.Atoi(vStr)
 	if err != nil {
 		return defaultValue
@@ -148,7 +149,7 @@ func newRequest() *Request {
 	return &Request{
 		state:   StateInit,
 		Headers: headers.NewHeaders(),
-		Body: "",
+		Body:    "",
 	}
 }
 
@@ -190,6 +191,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	for !request.done() {
 		n, err := reader.Read(buf[bufLen:])
+
 		// TODO: what to do with the question marks.
 		if err != nil {
 			return nil, err

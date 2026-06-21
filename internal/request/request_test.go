@@ -73,7 +73,7 @@ func TestParseHeaders(t *testing.T) {
 	r, err := RequestFromReader(reader)
 	require.NoError(t, err)
 	require.NotNil(t, r)
-	host, ok :=  r.Headers.Get("host")
+	host, ok := r.Headers.Get("host")
 	assert.True(t, ok)
 	assert.Equal(t, "localhost:42069", host)
 
@@ -103,13 +103,26 @@ func TestParseBody(t *testing.T) {
 			"Accept: */*\r\n" +
 			"Content-Length: 13\r\n" +
 			"\r\n" +
-			"hello world\n",
+			"Hello world!\n",
 		numBytesPerRead: 4,
 	}
 
 	r, err := RequestFromReader(reader)
 	require.NoError(t, err)
 	require.NotNil(t, r)
-	assert.Equal(t, "Hello world", r.Body)
+	assert.Equal(t, "Hello world!\n", r.Body)
+
+	reader = &chunkReader{
+		data: "GET / HTTP/1.1\r\n" +
+			"Host: localhost:42069\r\n" +
+			"User-agent: curl/7.81.0\r\n" +
+			"Accept: */*\r\n" +
+			"Content-Length: 23\r\n" +
+			"\r\n" +
+			"Partial Contentj\n",
+		numBytesPerRead: 4,
+	}
+	r, err = RequestFromReader(reader)
+	require.Error(t, err)
 
 }
