@@ -23,7 +23,7 @@ func GetDefaultHeaders(contenLen int) *headers.Headers {
 
 	h.Set("Content-Length", fmt.Sprintf("%d", contenLen))
 	h.Set("Connection", "close")
-	h.Set("Content-Type", "text/html")
+	h.Set("Content-Type", "text/plain")
 
 	return h
 }

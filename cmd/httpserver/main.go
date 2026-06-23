@@ -23,17 +23,17 @@ func tempHandler(w *response.Writer, req *request.Request) {
 	if req.RequestLine.RequestTarget == "/yourproblem" {
 		body = respond400()
 		status = response.StatusBadRequest
-	} else 	if req.RequestLine.RequestTarget == "/myproblem" {
+	} else if req.RequestLine.RequestTarget == "/myproblem" {
 		body = respond500()
 		status = response.StatusInternalServerError
 	}
 
 	h.Replace("Content-length", fmt.Sprintf("%d", len(body)))
+	h.Replace("Content-type", "text/html")
 	w.WriteStatusLine(status)
 	w.WriteHeaders(h)
 	w.WriteBody(body)
 }
-
 
 func main() {
 	server, err := server.Serve(port, tempHandler)
