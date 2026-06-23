@@ -15,6 +15,11 @@ func (h *Headers) Get(name string) (string, bool) {
 	return value, ok
 }
 
+func (h *Headers) Replace(name, value string) {
+	name = strings.ToLower(name)
+	h.headers[name] = value
+}
+
 func (h *Headers) Set(name, value string) {
 	name = strings.ToLower(name)
 	if v, ok := h.headers[name]; ok {
@@ -40,8 +45,6 @@ func NewHeaders() *Headers {
 		headers: map[string]string{},
 	}
 }
-
-
 
 func isToken(str []byte) bool {
 
